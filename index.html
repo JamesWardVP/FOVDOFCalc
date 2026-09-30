@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LED Wall Focus Planner</title>
+  <meta name="description" content="Visualise camera field of view and depth of field against an LED volume wall, and see when the wall falls into focus.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>LED Wall Focus Planner</h1>
+      <p>Field of view &amp; depth of field against an LED volume</p>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </header>
+
+  <main class="layout">
+    <aside class="controls">
+      <section class="panel">
+        <h2>LED wall</h2>
+        <div id="ctl-wall"></div>
+        <div class="row disabled" title="Planned for a future update">
+          <div class="row-head"><label>Curvature</label><span class="badge">coming soon</span></div>
+          <input type="range" disabled>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Camera</h2>
+        <label class="field">
+          <span>Camera body</span>
+          <select id="body"></select>
+        </label>
+        <div id="custom-sensor" class="custom-sensor" hidden>
+          <label class="field inline"><span>Sensor width</span><span class="val"><input id="customW" type="number" min="1" max="80" step="0.01"> mm</span></label>
+          <label class="field inline"><span>Sensor height</span><span class="val"><input id="customH" type="number" min="1" max="60" step="0.01"> mm</span></label>
+        </div>
+        <p class="hint" id="sensor-info"></p>
+        <div id="ctl-camera"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Lens &amp; focus</h2>
+        <div id="ctl-lens"></div>
+        <label class="check"><input id="focusAuto" type="checkbox"> Focus on subject (follow focus)</label>
+        <div class="coc">
+          <label class="check"><input id="cocAuto" type="checkbox"> Auto circle of confusion (sensor diagonal ÷ 1500)</label>
+          <label class="field inline"><span>Circle of confusion</span><span class="val"><input id="coc" type="number" min="0.002" max="0.1" step="0.001"> mm</span></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Subject</h2>
+        <div id="ctl-subject"></div>
+      </section>
+
+      <section class="panel">
+        <h2>View</h2>
+        <div id="ctl-view"></div>
+        <button id="reset" type="button">Reset to defaults</button>
+      </section>
+
+      <section class="panel soon" title="Planned for a future update">
+        <h2>Moiré check <span class="badge">coming soon</span></h2>
+        <p class="hint">Will estimate whether the LED pixel grid resolves on the sensor (pixel pitch vs. projected photosite size and focus blur) and flag likely moiré.</p>
+        <label class="field inline"><span>Pixel pitch</span><span class="val"><input type="number" value="2.6" disabled> mm</span></label>
+      </section>
+    </aside>
+
+    <section class="views">
+      <div class="view">
+        <div class="view-head">
+          <h2>Top view</h2>
+          <span class="hint">Drag the camera or the subject</span>
+        </div>
+        <canvas id="top" aria-label="Top-down view of the LED wall, camera, subject, field of view and depth of field"></canvas>
+      </div>
+
+      <div class="view">
+        <div class="view-head">
+          <h2>Side view</h2>
+          <span class="hint">Section along the line of sight · drag the camera (height) or the aim point</span>
+        </div>
+        <canvas id="side" aria-label="Side view along the camera's line of sight"></canvas>
+      </div>
+
+      <div class="legend">
+        <span><i class="sw frustum"></i>Field of view</span>
+        <span><i class="sw dof"></i>Depth of field</span>
+        <span><i class="sw line focus"></i>Focus plane</span>
+        <span><i class="dot near"></i>Nearest sharp</span>
+        <span><i class="dot far"></i>Furthest sharp</span>
+        <span><i class="dot hyper"></i>Hyperfocal</span>
+        <span><i class="sw lit"></i>Wall in frame</span>
+        <span><i class="sw hazard"></i>Wall in focus</span>
+      </div>
+
+      <div id="readouts" class="readouts"></div>
+      <div id="advice" class="advice"></div>
+
+      <p class="footnote">
+        Depth of field uses the thin-lens hyperfocal model. Distances to the wall are measured along the optical axis
+        (the focus plane is perpendicular to the lens axis), so a panned camera sees one side of the wall closer than the other.
+        The top view shows the horizontal slice through the lens axis; the side view shows the vertical slice.
+      </p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
