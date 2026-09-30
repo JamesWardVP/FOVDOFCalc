@@ -21,22 +21,26 @@
       <section class="panel">
         <h2>LED wall</h2>
         <div id="ctl-wall"></div>
-        <div class="row disabled" title="Planned for a future update">
-          <div class="row-head"><label>Curvature</label><span class="badge">coming soon</span></div>
-          <input type="range" disabled>
+        <p class="hint" id="curve-info"></p>
+        <div class="subgroup">
+          <label class="field">
+            <span>LED pixel pitch</span>
+            <select id="pitchSel"></select>
+          </label>
+          <label class="field inline"><span>Pitch (custom entry)</span><span class="val"><input id="pitch" type="number" min="0.3" max="20" step="0.01"> mm</span></label>
         </div>
       </section>
 
       <section class="panel">
         <h2>Camera</h2>
         <label class="field">
-          <span>Camera body</span>
+          <span>Camera / sensor format</span>
           <select id="body"></select>
         </label>
-        <div id="custom-sensor" class="custom-sensor" hidden>
-          <label class="field inline"><span>Sensor width</span><span class="val"><input id="customW" type="number" min="1" max="80" step="0.01"> mm</span></label>
-          <label class="field inline"><span>Sensor height</span><span class="val"><input id="customH" type="number" min="1" max="60" step="0.01"> mm</span></label>
-        </div>
+        <label class="field inline"><span>Sensor width</span><span class="val"><input id="sensorW" type="number" min="1" max="80" step="0.01"> mm</span></label>
+        <label class="field inline"><span>Sensor height</span><span class="val"><input id="sensorH" type="number" min="1" max="60" step="0.01"> mm</span></label>
+        <label class="field inline"><span>Horizontal resolution</span><span class="val"><input id="resH" type="number" min="256" max="20000" step="1"> px</span></label>
+        <p class="hint">Typing a sensor size switches to “Custom”. Resolution sets the photosite size used for the moiré check.</p>
         <p class="hint" id="sensor-info"></p>
         <div id="ctl-camera"></div>
       </section>
@@ -62,11 +66,6 @@
         <button id="reset" type="button">Reset to defaults</button>
       </section>
 
-      <section class="panel soon" title="Planned for a future update">
-        <h2>Moiré check <span class="badge">coming soon</span></h2>
-        <p class="hint">Will estimate whether the LED pixel grid resolves on the sensor (pixel pitch vs. projected photosite size and focus blur) and flag likely moiré.</p>
-        <label class="field inline"><span>Pixel pitch</span><span class="val"><input type="number" value="2.6" disabled> mm</span></label>
-      </section>
     </aside>
 
     <section class="views">
@@ -95,6 +94,8 @@
         <span><i class="dot hyper"></i>Hyperfocal</span>
         <span><i class="sw lit"></i>Wall in frame</span>
         <span><i class="sw hazard"></i>Wall in focus</span>
+        <span><i class="sw moire-mid"></i>Moiré moderate</span>
+        <span><i class="sw moire-high"></i>Moiré high</span>
       </div>
 
       <div id="readouts" class="readouts"></div>
@@ -104,10 +105,14 @@
         Depth of field uses the thin-lens hyperfocal model. Distances to the wall are measured along the optical axis
         (the focus plane is perpendicular to the lens axis), so a panned camera sees one side of the wall closer than the other.
         The top view shows the horizontal slice through the lens axis; the side view shows the vertical slice.
+        The moiré check images the LED pitch onto the sensor (including foreshortening on angled or curved panels),
+        compares it with the photosite pitch, and applies the contrast loss from defocus blur. It ignores lens sharpness
+        and any optical low-pass filter, so treat it as a conservative estimate.
       </p>
     </section>
   </main>
 
+  <script src="optics.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -6,42 +6,60 @@
  * World coordinates (metres):
  *   x — across the stage (left/right), wall centred on x = 0
  *   y — height above the floor
- *   z — distance in front of the wall; the wall face sits in the plane z = 0
+ *   z — distance in front of the wall; the centre of the wall face sits at z = 0
+ *
+ * The optics and wall-geometry maths live in optics.js (unit-tested in tests/).
  */
 
 /* ------------------------------------------------------------------ */
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 
-// Sensor dimensions (mm) for a typical recording mode of each camera.
+// Sensor size (mm) and horizontal photosite count for a typical recording mode.
+// Generic formats have no fixed resolution; 4096 px is assumed and can be edited.
 const CAMERAS = [
-  { id: 'alexa35', name: 'ARRI ALEXA 35 (4.6K Open Gate)', w: 27.99, h: 19.22 },
-  { id: 'alexaminilf', name: 'ARRI ALEXA Mini LF (Open Gate)', w: 36.70, h: 25.54 },
-  { id: 'alexamini', name: 'ARRI ALEXA Mini (3.4K Open Gate)', w: 28.25, h: 18.17 },
-  { id: 'alexa65', name: 'ARRI ALEXA 65 (Open Gate)', w: 54.12, h: 25.58 },
-  { id: 'vraptor', name: 'RED V-RAPTOR 8K VV', w: 40.96, h: 21.60 },
-  { id: 'komodo', name: 'RED KOMODO 6K S35', w: 27.03, h: 14.26 },
-  { id: 'venice2', name: 'Sony VENICE 2 8.6K (3:2)', w: 36.20, h: 24.10 },
-  { id: 'fx6', name: 'Sony FX6 / FX3 (Full Frame)', w: 35.60, h: 23.80 },
-  { id: 'ursa12k', name: 'Blackmagic URSA Mini Pro 12K', w: 27.03, h: 14.25 },
-  { id: 'pocket6k', name: 'Blackmagic Pocket 6K', w: 23.10, h: 12.99 },
-  { id: 'pocket4k', name: 'Blackmagic Pocket 4K (MFT)', w: 18.96, h: 10.00 },
-  { id: 'c70', name: 'Canon C70 / C300 Mk III (S35)', w: 26.20, h: 13.80 },
-  { id: 'ff', name: 'Generic Full Frame (36 × 24)', w: 36.00, h: 24.00 },
-  { id: 's35', name: 'Generic Super 35 (4-perf)', w: 24.89, h: 18.66 },
-  { id: 'mft', name: 'Generic Micro Four Thirds', w: 17.30, h: 13.00 },
-  { id: 'custom', name: 'Custom sensor…', w: 36.00, h: 24.00 },
+  { id: 'ff', group: 'Generic formats', name: 'Full Frame (36 × 24)', w: 36.00, h: 24.00, res: 6000 },
+  { id: 'lf65', group: 'Generic formats', name: 'Large Format 65 mm (54.12 × 25.58)', w: 54.12, h: 25.58, res: 6560 },
+  { id: 'mf', group: 'Generic formats', name: 'Medium Format (44 × 33)', w: 44.00, h: 33.00, res: 8256 },
+  { id: 'vv', group: 'Generic formats', name: 'Vista Vision / VV (40.96 × 21.60)', w: 40.96, h: 21.60, res: 8192 },
+  { id: 'apsh', group: 'Generic formats', name: 'APS-H (27.9 × 18.6)', w: 27.90, h: 18.60, res: 4096 },
+  { id: 's35', group: 'Generic formats', name: 'Super 35 4-perf (24.89 × 18.66)', w: 24.89, h: 18.66, res: 4096 },
+  { id: 's35-3p', group: 'Generic formats', name: 'Super 35 3-perf / 16:9 (24.89 × 13.87)', w: 24.89, h: 13.87, res: 4096 },
+  { id: 'apsc', group: 'Generic formats', name: 'APS-C (23.5 × 15.6)', w: 23.50, h: 15.60, res: 6000 },
+  { id: 'apsc-canon', group: 'Generic formats', name: 'APS-C Canon (22.3 × 14.9)', w: 22.30, h: 14.90, res: 6000 },
+  { id: 'mft', group: 'Generic formats', name: 'Micro Four Thirds (17.3 × 13.0)', w: 17.30, h: 13.00, res: 5184 },
+  { id: 'one-inch', group: 'Generic formats', name: '1-inch (13.2 × 8.8)', w: 13.20, h: 8.80, res: 5472 },
+  { id: 's16', group: 'Generic formats', name: 'Super 16 (12.52 × 7.41)', w: 12.52, h: 7.41, res: 2048 },
+  { id: 'two-thirds', group: 'Generic formats', name: '2/3-inch broadcast (9.59 × 5.39)', w: 9.59, h: 5.39, res: 1920 },
+
+  { id: 'alexa35', group: 'Cinema cameras', name: 'ARRI ALEXA 35 (4.6K Open Gate)', w: 27.99, h: 19.22, res: 4608 },
+  { id: 'alexaminilf', group: 'Cinema cameras', name: 'ARRI ALEXA Mini LF (Open Gate)', w: 36.70, h: 25.54, res: 4448 },
+  { id: 'alexamini', group: 'Cinema cameras', name: 'ARRI ALEXA Mini (3.4K Open Gate)', w: 28.25, h: 18.17, res: 3424 },
+  { id: 'alexa65', group: 'Cinema cameras', name: 'ARRI ALEXA 65 (Open Gate)', w: 54.12, h: 25.58, res: 6560 },
+  { id: 'vraptor', group: 'Cinema cameras', name: 'RED V-RAPTOR 8K VV', w: 40.96, h: 21.60, res: 8192 },
+  { id: 'komodo', group: 'Cinema cameras', name: 'RED KOMODO 6K S35', w: 27.03, h: 14.26, res: 6144 },
+  { id: 'venice2', group: 'Cinema cameras', name: 'Sony VENICE 2 8.6K (3:2)', w: 36.20, h: 24.10, res: 8640 },
+  { id: 'fx6', group: 'Cinema cameras', name: 'Sony FX6 / FX3 (Full Frame)', w: 35.60, h: 23.80, res: 4240 },
+  { id: 'ursa12k', group: 'Cinema cameras', name: 'Blackmagic URSA Mini Pro 12K', w: 27.03, h: 14.25, res: 12288 },
+  { id: 'pocket6k', group: 'Cinema cameras', name: 'Blackmagic Pocket 6K', w: 23.10, h: 12.99, res: 6144 },
+  { id: 'pocket4k', group: 'Cinema cameras', name: 'Blackmagic Pocket 4K (MFT)', w: 18.96, h: 10.00, res: 4096 },
+  { id: 'c70', group: 'Cinema cameras', name: 'Canon C70 / C300 Mk III (S35)', w: 26.20, h: 13.80, res: 4096 },
+
+  { id: 'custom', group: 'Custom', name: 'Custom sensor size…' },
 ];
+
+// LED pixel pitch presets (mm).
+const PITCHES = [1.2, 1.4, 1.5, 1.9, 2.3, 2.6, 2.8];
 
 // Third-stop aperture scale.
 const FSTOPS = [1, 1.1, 1.2, 1.4, 1.6, 1.8, 2, 2.2, 2.5, 2.8, 3.2, 3.5, 4, 4.5, 5, 5.6,
   6.3, 7.1, 8, 9, 10, 11, 13, 14, 16, 18, 20, 22];
 
 const DEFAULTS = {
-  wallW: 10, wallH: 4, wallBottom: 0,
+  wallW: 10, wallH: 4, wallBottom: 0, curve: 0, pitch: 1.5,
   camX: 0, camZ: 7, camY: 1.5,
   subX: 0.5, subZ: 4, subH: 1.8, aimH: 1.6,
-  body: 'alexa35', customW: 36, customH: 24,
+  body: 'alexa35', sensorW: 27.99, sensorH: 19.22, resH: 4608,
   focal: 35, fstopIdx: FSTOPS.indexOf(2.8),
   focusAuto: true, focus: 3,
   cocAuto: true, coc: 0.025,
@@ -53,10 +71,11 @@ const SLIDERS = {
     { key: 'wallW', label: 'Width', min: 1, max: 30, step: 0.1, unit: 'm' },
     { key: 'wallH', label: 'Height', min: 0.5, max: 12, step: 0.1, unit: 'm' },
     { key: 'wallBottom', label: 'Bottom edge above floor', min: 0, max: 3, step: 0.05, unit: 'm' },
+    { key: 'curve', label: 'Curvature (total arc)', min: -90, max: 300, step: 1, unit: '°' },
   ],
   'ctl-camera': [
     { key: 'camX', label: 'Position across stage (X)', min: -10, max: 10, step: 0.05, unit: 'm', dyn: 'x' },
-    { key: 'camZ', label: 'Distance from wall (Z)', min: 0.3, max: 12, step: 0.05, unit: 'm', dyn: 'z' },
+    { key: 'camZ', label: 'Distance from wall centre (Z)', min: -20, max: 12, step: 0.05, unit: 'm', dyn: 'z' },
     { key: 'camY', label: 'Lens height', min: 0.1, max: 6, step: 0.05, unit: 'm' },
   ],
   'ctl-lens': [
@@ -66,7 +85,7 @@ const SLIDERS = {
   ],
   'ctl-subject': [
     { key: 'subX', label: 'Position across stage (X)', min: -10, max: 10, step: 0.05, unit: 'm', dyn: 'x' },
-    { key: 'subZ', label: 'Distance from wall (Z)', min: 0.2, max: 12, step: 0.05, unit: 'm', dyn: 'z' },
+    { key: 'subZ', label: 'Distance from wall centre (Z)', min: -20, max: 12, step: 0.05, unit: 'm', dyn: 'z' },
     { key: 'subH', label: 'Subject height', min: 0.5, max: 2.2, step: 0.01, unit: 'm' },
     { key: 'aimH', label: 'Aim point height', min: 0, max: 3, step: 0.01, unit: 'm' },
   ],
@@ -95,18 +114,35 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 /* Scene model                                                         */
 /* ------------------------------------------------------------------ */
 
-// Half-width of the stage shown in the top view (also the X limit for camera/subject).
-const stageHalfWidth = () => Math.max(state.wallW / 2 + 2, 4);
+const wallShape = () => Optics.wallShape(state.wallW, state.curve);
+
+// Plan-view extents of the wall (front face and a nominal back).
+function wallExtents(shape) {
+  let minZ = 0, maxZ = 0, maxX = 0;
+  for (let i = 0; i <= 40; i++) {
+    const p = Optics.wallPlan(shape, i / 40);
+    minZ = Math.min(minZ, p.z - 0.3 * p.nz);
+    maxZ = Math.max(maxZ, p.z);
+    maxX = Math.max(maxX, Math.abs(p.x - 0.3 * p.nx));
+  }
+  return { minZ, maxZ, maxX };
+}
+
+// World rectangle shown in the top view (also the limits for moving camera/subject).
+function stageBounds() {
+  const e = wallExtents(wallShape());
+  const half = Math.max(e.maxX + 2, 4);
+  return { xmin: -half, xmax: half, zmin: Math.min(-1, e.minZ - 0.8), zmax: Math.max(state.stageDepth, e.maxZ + 1) };
+}
 
 // A point on the wall face. u runs left→right (0..1), v bottom→top (0..1).
-// Curvature (future) only needs to change this function.
-function wallPoint(u, v) {
-  return v3(-state.wallW / 2 + u * state.wallW, state.wallBottom + v * state.wallH, 0);
+function wallPoint(shape, u, v) {
+  const p = Optics.wallPlan(shape, u);
+  return { p: v3(p.x, state.wallBottom + v * state.wallH, p.z), n: v3(p.nx, 0, p.nz), t: v3(p.tx, 0, p.tz) };
 }
 
 function sensor() {
-  if (state.body === 'custom') return { w: state.customW, h: state.customH };
-  return CAMERAS.find(c => c.id === state.body) || CAMERAS[0];
+  return { w: state.sensorW, h: state.sensorH, res: state.resH };
 }
 
 // Camera position and orthonormal basis, aimed at the subject's aim point.
@@ -139,9 +175,7 @@ function compute() {
   const s = Math.max(state.focus, f * 1.5);
 
   // Thin-lens depth of field, all in metres.
-  const H = (f * f) / (N * c) + f;
-  const near = (s * (H - f)) / (H + s - 2 * f);
-  const far = s < H ? (s * (H - f)) / (H - s) : Infinity;
+  const { H, near, far } = Optics.dof(f, N, c, s);
 
   const hfov = 2 * Math.atan(sen.w / (2 * fmm));
   const vfov = 2 * Math.atan(sen.h / (2 * fmm));
@@ -149,23 +183,59 @@ function compute() {
   const o = {
     cb, sen, fmm, f, cocMm, c, N, s, H, near, far, hfov, vfov,
     th: Math.tan(hfov / 2), tv: Math.tan(vfov / 2),
+    shape: wallShape(),
+    v: Optics.imageDistance(f, s), // lens-to-sensor distance (m)
+    photositeMm: sen.w / sen.res,
+    pitchM: state.pitch / 1000,
   };
   o.wall = analyseWall(o);
-  o.section = sightSection(cb);
+  o.section = sightSection(o);
   return o;
 }
 
-// Classify a world point relative to the camera: in frame? inside the DOF?
-function evalPoint(p, o) {
+// Project a world point to sensor-plane coordinates (m). Null if behind the lens.
+function toSensor(p, o) {
   const { cam, F, R, U } = o.cb;
   const d = vsub(p, cam);
   const depth = vdot(d, F);
-  if (depth <= 1e-6) return { visible: false, inDof: false, inFocus: false, depth };
+  if (depth <= 1e-6) return null;
+  return { x: (o.v * vdot(d, R)) / depth, y: (o.v * vdot(d, U)) / depth, depth };
+}
+
+// Classify a point on the wall: in frame? inside the DOF? moiré risk?
+function evalWallPoint(wp, o) {
+  const { p, n, t } = wp;
+  const { cam, F, R, U } = o.cb;
+  const d = vsub(p, cam);
+  const depth = vdot(d, F);
+  const facing = vdot(n, d) < 0; // the LED face points toward the camera
+  if (depth <= 1e-6 || !facing) return { visible: false, inDof: false, inFocus: false, depth, moire: 0 };
   const x = vdot(d, R) / depth;
   const y = vdot(d, U) / depth;
   const visible = Math.abs(x) <= o.th + 1e-9 && Math.abs(y) <= o.tv + 1e-9;
   const inDof = depth >= o.near && depth <= o.far;
-  return { visible, inDof, inFocus: visible && inDof, depth };
+  const e = { visible, inDof, inFocus: visible && inDof, depth, moire: 0 };
+  if (visible) Object.assign(e, moireAt(wp, o, depth));
+  return e;
+}
+
+// Moiré estimate at a wall point: image the LED pitch along both grid axes,
+// compare with the sensor photosite pitch and the defocus blur there.
+function moireAt(wp, o, depth) {
+  const blurMm = Optics.blurDiameter(o.f, o.N, o.s, depth) * 1000;
+  const s0 = toSensor(wp.p, o);
+  let worst = null;
+  for (const axis of [wp.t, v3(0, 1, 0)]) {
+    const s1 = toSensor(vadd(wp.p, vmul(axis, o.pitchM)), o);
+    if (!s0 || !s1) continue;
+    const pImgMm = Math.hypot(s1.x - s0.x, s1.y - s0.y) * 1000;
+    const m = Optics.moireLevel(pImgMm, o.photositeMm, blurMm);
+    if (!worst || m.level > worst.level || (m.level === worst.level && m.contrast > worst.contrast)) {
+      worst = { ...m, pImgMm };
+    }
+  }
+  if (!worst) return { moire: 0 };
+  return { moire: worst.level, contrast: worst.contrast, ratio: worst.ratio, pImgMm: worst.pImgMm, blurMm };
 }
 
 const WALL_NU = 161;
@@ -173,35 +243,42 @@ const WALL_NV = 61;
 
 function analyseWall(o) {
   const cols = [];
-  let visible = 0, inFocus = 0, minDepth = Infinity, maxDepth = -Infinity;
+  let visible = 0, inFocus = 0, moireCount = 0, minDepth = Infinity, maxDepth = -Infinity;
+  let worst = null;     // sample with the highest moiré level / contrast
+  let safeStop = Infinity; // widest-needed f-number that blurs away all near-Nyquist grid
   for (let i = 0; i < WALL_NU; i++) {
     const u = i / (WALL_NU - 1);
-    const col = { u, visible: false, inFocus: false };
+    const col = { u, visible: false, inFocus: false, moire: 0 };
     for (let j = 0; j < WALL_NV; j++) {
-      const e = evalPoint(wallPoint(u, j / (WALL_NV - 1)), o);
+      const e = evalWallPoint(wallPoint(o.shape, u, j / (WALL_NV - 1)), o);
       if (!e.visible) continue;
       visible++;
       col.visible = true;
       minDepth = Math.min(minDepth, e.depth);
       maxDepth = Math.max(maxDepth, e.depth);
       if (e.inFocus) { inFocus++; col.inFocus = true; }
+      col.moire = Math.max(col.moire, e.moire);
+      if (e.moire >= 2) moireCount++;
+      if (e.pImgMm && (!worst || e.moire > worst.moire || (e.moire === worst.moire && e.contrast > worst.contrast))) worst = e;
+      // Blur scales with 1/N, so the stop giving blur = SAFE_BLUR_RATIO × imaged pitch is:
+      if (e.pImgMm && e.ratio < Optics.BAYER_LIMIT) {
+        safeStop = Math.min(safeStop, (o.N * e.blurMm) / (Optics.SAFE_BLUR_RATIO * e.pImgMm));
+      }
     }
     cols.push(col);
   }
   return {
-    cols, visible, inFocus, minDepth, maxDepth,
+    cols, visible, inFocus, minDepth, maxDepth, worst, safeStop,
     fraction: visible ? inFocus / visible : 0,
+    moireFraction: visible ? moireCount / visible : 0,
+    moireLevel: worst ? worst.moire : 0,
   };
 }
 
-// Where the vertical plane through the line of sight meets the wall plane.
-function sightSection(cb) {
-  const h = cb.heading;
-  if (h.z >= -1e-6) return null;
-  const t = -state.camZ / h.z; // horizontal distance from camera to wall plane
-  const x = state.camX + t * h.x;
-  const u = (x + state.wallW / 2) / state.wallW;
-  return { t, x, u, onWall: u >= 0 && u <= 1 };
+// Where the vertical plane through the line of sight meets the wall.
+function sightSection(o) {
+  const h = o.cb.heading;
+  return Optics.rayWall(o.shape, state.camX, state.camZ, h.x, h.z);
 }
 
 /* ------------------------------------------------------------------ */
@@ -226,7 +303,8 @@ let colors = {};
 function readColors() {
   const cs = getComputedStyle(document.documentElement);
   const names = ['canvas-bg', 'grid', 'floor', 'text', 'muted', 'wall', 'wall-lit', 'frustum',
-    'frustum-line', 'dof', 'focus', 'near', 'far', 'hyper', 'cam', 'subject', 'hazard-a', 'hazard-b'];
+    'frustum-line', 'dof', 'focus', 'near', 'far', 'hyper', 'cam', 'subject', 'hazard-a', 'hazard-b',
+    'moire-high', 'moire-mid'];
   colors = {};
   for (const n of names) colors[n] = cs.getPropertyValue('--' + n).trim();
 }
@@ -381,9 +459,10 @@ let drag = null;
 
 function drawTop(o) {
   const { ctx, w, h } = prepCanvas(topCanvas);
-  const half = stageHalfWidth();
-  const V = makeView(w, h, -half, half, -1, state.stageDepth, false);
+  const b = stageBounds();
+  const V = makeView(w, h, b.xmin, b.xmax, b.zmin, b.zmax, false);
   topView = V;
+  const shape = o.shape;
   drawGrid(ctx, V, w, h);
 
   const { cam, F, R, heading } = o.cb;
@@ -391,11 +470,18 @@ function drawTop(o) {
   const at = (d, side) => vadd(cam, vmul(vadd(F, vmul(R, side * o.th)), d)); // point at axial depth d on a FOV edge
   const FAR = 400;
 
-  // Region in front of the wall (z >= 0) – everything the camera can "see".
+  // Clip to the stage side of the wall's (extended) surface – what the camera can "see".
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, V.Y(0), w, h);
-  ctx.clip();
+  if (shape.flat) {
+    ctx.rect(0, V.Y(0), w, h);
+  } else if (shape.R > 0) {
+    ctx.arc(V.X(0), V.Y(shape.R), shape.R * V.k, 0, Math.PI * 2);
+  } else {
+    ctx.rect(0, 0, w, h);
+    ctx.arc(V.X(0), V.Y(shape.R), -shape.R * V.k, 0, Math.PI * 2, true);
+  }
+  ctx.clip('evenodd');
 
   // Field of view
   poly(ctx, [P(cam), P(at(FAR, -1)), P(at(FAR, 1))]);
@@ -429,20 +515,43 @@ function drawTop(o) {
   ctx.setLineDash([]);
   ctx.restore();
 
-  // Wall (drawn as a slab behind the face at z = 0)
+  // Wall: one quad per analysed column, drawn as a slab behind the LED face.
   const thick = Math.max(0.25, 7 / V.k);
-  const segW = state.wallW / (WALL_NU - 1);
+  const du = 0.5 / (WALL_NU - 1);
+  const face = u => Optics.wallPlan(shape, Math.min(1, Math.max(0, u)));
+  const quad = (u0, u1, off0, off1) => {
+    const a = face(u0), c = face(u1);
+    return [
+      [V.X(a.x - a.nx * off0), V.Y(a.z - a.nz * off0)], [V.X(c.x - c.nx * off0), V.Y(c.z - c.nz * off0)],
+      [V.X(c.x - c.nx * off1), V.Y(c.z - c.nz * off1)], [V.X(a.x - a.nx * off1), V.Y(a.z - a.nz * off1)],
+    ];
+  };
   for (const col of o.wall.cols) {
-    const x = -state.wallW / 2 + col.u * state.wallW;
-    const x0 = V.X(Math.max(-state.wallW / 2, x - segW / 2));
-    const x1 = V.X(Math.min(state.wallW / 2, x + segW / 2));
+    poly(ctx, quad(col.u - du, col.u + du, 0, thick));
     ctx.fillStyle = col.inFocus ? hazard(ctx) : col.visible ? colors['wall-lit'] : colors.wall;
-    ctx.fillRect(x0, V.Y(-thick), x1 - x0 + 0.5, V.Y(0) - V.Y(-thick));
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 0.6;
+    ctx.fill();
+    ctx.stroke();
+    // Moiré strip on the stage side of the face
+    if (col.moire >= 2) {
+      poly(ctx, quad(col.u - du, col.u + du, -1.5 / V.k, -5 / V.k));
+      ctx.fillStyle = col.moire === 3 ? colors['moire-high'] : colors['moire-mid'];
+      ctx.fill();
+    }
   }
+  // Outline
+  ctx.beginPath();
+  for (let i = 0; i <= 80; i++) { const p = face(i / 80); ctx[i ? 'lineTo' : 'moveTo'](V.X(p.x), V.Y(p.z)); }
+  for (let i = 80; i >= 0; i--) { const p = face(i / 80); ctx.lineTo(V.X(p.x - p.nx * thick), V.Y(p.z - p.nz * thick)); }
+  ctx.closePath();
   ctx.strokeStyle = colors.text;
   ctx.lineWidth = 1;
-  ctx.strokeRect(V.X(-state.wallW / 2), V.Y(-thick), state.wallW * V.k, thick * V.k);
-  label(ctx, `LED wall ${state.wallW.toFixed(1)} m × ${state.wallH.toFixed(1)} m`, V.X(0), V.Y(-thick) - 9, colors.muted, 'center');
+  ctx.stroke();
+  const ext = wallExtents(shape);
+  const curveTxt = shape.flat ? '' : ` · ${Math.abs(state.curve)}° ${state.curve > 0 ? 'concave' : 'convex'}`;
+  label(ctx, `LED wall ${state.wallW.toFixed(1)} m × ${state.wallH.toFixed(1)} m${curveTxt}`,
+    V.X(0), Math.max(12, V.Y(Math.min(ext.minZ, -thick)) - 9), colors.muted, 'center');
 
   // Axis markers (projected onto the floor plan)
   const perp = { x: -heading.z, z: heading.x };
@@ -450,7 +559,8 @@ function drawTop(o) {
   const tag = (d, kind, text, sideSign) => {
     const [x, y] = axisPt(d);
     // Points behind the wall face are not drawn here (see the side view / readouts).
-    if (vadd(cam, vmul(F, d)).z < 0 || x < -20 || x > w + 20 || y < -20 || y > h + 20) return;
+    const q = vadd(cam, vmul(F, d));
+    if (Optics.frontClearance(shape, q.x, q.z) < 0 || x < -20 || x > w + 20 || y < -20 || y > h + 20) return;
     marker(ctx, x, y, kind);
     const lx = x + perp.x * 16 * sideSign, ly = y + perp.z * 16 * sideSign;
     label(ctx, text, lx, ly, colors[kind], perp.x * sideSign >= 0 ? 'left' : 'right');
@@ -461,7 +571,8 @@ function drawTop(o) {
 
   // Focus-plane label at the edge of frame
   const [fx, fy] = P(at(o.s, 1));
-  if (fy > V.Y(0)) label(ctx, 'Focus ' + fmtM(o.s), fx + 6, fy, colors.focus);
+  const fp = at(o.s, 1);
+  if (Optics.frontClearance(shape, fp.x, fp.z) > 0) label(ctx, 'Focus ' + fmtM(o.s), fx + 6, fy, colors.focus);
 
   // Subject (top-down person: shoulders + head, facing the camera)
   const sx = V.X(state.subX), sy = V.Y(state.subZ);
@@ -564,16 +675,20 @@ function drawSide(o) {
     const thick = Math.max(0.25, 7 / V.k);
     const x0 = V.X(sec.t), x1 = V.X(sec.t + thick);
     if (sec.onWall) {
-      const n = WALL_NV;
-      const segH = state.wallH / (n - 1);
-      for (let j = 0; j < n; j++) {
-        const v = j / (n - 1);
+      const segH = state.wallH / (WALL_NV - 1);
+      for (let j = 0; j < WALL_NV; j++) {
+        const v = j / (WALL_NV - 1);
         const y = state.wallBottom + v * state.wallH;
-        const e = evalPoint(v3(sec.x, y, 0), o);
+        const n = Optics.wallPlan(o.shape, sec.u);
+        const e = evalWallPoint({ p: v3(sec.x, y, sec.z), n: v3(n.nx, 0, n.nz), t: v3(n.tx, 0, n.tz) }, o);
         const y0 = V.Y(Math.min(wallTop, y + segH / 2));
         const y1 = V.Y(Math.max(state.wallBottom, y - segH / 2));
         ctx.fillStyle = e.inFocus ? hazard(ctx) : e.visible ? colors['wall-lit'] : colors.wall;
         ctx.fillRect(x0, y0, x1 - x0, y1 - y0 + 0.5);
+        if (e.moire >= 2) {
+          ctx.fillStyle = e.moire === 3 ? colors['moire-high'] : colors['moire-mid'];
+          ctx.fillRect(x0 - 5, y0, 3.5, y1 - y0 + 0.5);
+        }
       }
       ctx.strokeStyle = colors.text;
       ctx.lineWidth = 1;
@@ -587,7 +702,7 @@ function drawSide(o) {
       label(ctx, 'Line of sight misses the wall', x0 - 6, V.Y(wallTop) - 10, colors.muted, 'right');
     }
   } else {
-    label(ctx, 'Camera is facing away from the wall', w - 12, 16, colors.muted, 'right');
+    label(ctx, 'Line of sight does not reach the wall', w - 12, 16, colors.muted, 'right');
   }
 
   // Axis markers
@@ -647,12 +762,17 @@ function stat(k, v, s = '', bad = false) {
   return `<div class="stat${bad ? ' bad' : ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
 }
 
+const MOIRE_LABEL = ['Low', 'Grid visible', 'Moderate', 'High'];
+const fmtUm = mm => (mm * 1000).toFixed(1) + ' µm';
+
 function renderReadouts(o) {
   const wall = o.wall;
   const D = wall.minDepth;
   const inShot = wall.visible > 0;
   const hazardOn = wall.inFocus > 0;
   const gap = inShot && isFinite(o.far) ? D - o.far : null;
+  const mw = wall.worst;
+  const moireOn = wall.moireLevel >= 2;
 
   document.getElementById('readouts').innerHTML = [
     stat('Horizontal FOV', fmtDeg(o.hfov), `Vertical ${fmtDeg(o.vfov)}`),
@@ -665,33 +785,58 @@ function renderReadouts(o) {
     stat('Far limit → wall', gap === null ? (inShot ? 'wall sharp' : '—') : (gap >= 0 ? fmtM(gap) : '−' + fmtM(-gap)),
       gap === null ? '' : gap >= 0 ? 'clearance behind DOF' : 'wall is inside DOF', hazardOn),
     stat('Circle of confusion', o.cocMm.toFixed(4) + ' mm', `${o.sen.w.toFixed(2)} × ${o.sen.h.toFixed(2)} mm sensor`),
+    stat('Moiré risk', inShot && mw ? MOIRE_LABEL[wall.moireLevel] : '—',
+      inShot && mw ? `${Math.round(wall.moireFraction * 100)}% of visible wall at moderate+` : 'wall not in shot', moireOn),
+    stat('LED pitch on sensor', mw ? fmtUm(mw.pImgMm) : '—',
+      mw ? `${mw.ratio.toFixed(2)} photosites (${fmtUm(o.photositeMm)} each)` : `photosite ${fmtUm(o.photositeMm)}`, moireOn),
+    stat('Defocus blur at wall', mw ? fmtUm(mw.blurMm) : '—',
+      mw ? `grid contrast left: ${Math.round(mw.contrast * 100)}%` : '', moireOn),
   ].join('');
 
   // Advice
   const tips = [];
   if (inShot) {
-    const { f, c, s, H } = o;
-    // Aperture at which the far limit lands exactly on the nearest visible wall.
+    const { f, c, s, N } = o;
+    const maxStop = FSTOPS[FSTOPS.length - 1];
     if (D > s) {
-      const Hreq = (s * (D - f)) / (D - s);
-      const nLimit = (f * f) / (c * (Hreq - f));
+      // Aperture at which the far limit lands exactly on the nearest visible wall.
+      const nLimit = Optics.stopForFarLimit(f, c, s, D);
       if (hazardOn) {
         tips.push(nLimit >= FSTOPS[0]
           ? `Open up to wider than <b>${fmtStop(nLimit)}</b> to push the far limit in front of the wall.`
           : `Even wide open (${fmtStop(FSTOPS[0])}) the wall stays sharp at this focus distance — move the subject/camera away from the wall or use a longer lens.`);
-      } else {
+      } else if (nLimit <= maxStop) {
         tips.push(`Stopping down past <b>${fmtStop(nLimit)}</b> will bring the wall into focus.`);
+      } else {
+        tips.push(`The wall stays outside the depth of field at every stop up to ${fmtStop(maxStop)}.`);
       }
       // Furthest focus distance at the current stop before the wall sharpens.
-      const sMax = (D * H) / (H - f + D);
-      tips.push(`At ${fmtStop(o.N)}, keep focus closer than <b>${fmtM(sMax)}</b> to keep the wall soft.`);
-    } else {
+      tips.push(`At ${fmtStop(N)}, keep focus closer than <b>${fmtM(Optics.maxFocusForFarLimit(f, N, c, D))}</b> to keep the wall soft.`);
+    } else if (hazardOn) {
       tips.push('Focus is set at or beyond the nearest visible part of the wall — the wall will be sharp.');
+    } else {
+      tips.push('Focus is set behind the nearest visible part of the wall; that part sits in front of the near limit, so it is soft.');
     }
     if (hazardOn) {
       tips.push(`<b>${Math.round(wall.fraction * 100)}%</b> of the wall visible in frame is inside the depth of field (hazard-striped in both views).`);
     }
     tips.push(`Subject-to-wall gap along the lens axis: <b>${fmtM(D - o.cb.subjectDist)}</b> (nearest visible wall). More gap = softer wall.`);
+
+    // Moiré guidance
+    if (moireOn) {
+      tips.push(`<b>Moiré ${MOIRE_LABEL[wall.moireLevel].toLowerCase()}:</b> the ${state.pitch} mm LED grid images at ${fmtUm(mw.pImgMm)} ` +
+        `(${mw.ratio.toFixed(2)} photosites per LED pixel — finer than the ${Optics.BAYER_LIMIT}-photosite colour sampling limit of a Bayer sensor) ` +
+        `and only ${fmtUm(mw.blurMm)} of defocus leaves ${Math.round(mw.contrast * 100)}% grid contrast. Marked with a red/orange strip on the wall.`);
+      if (isFinite(wall.safeStop)) {
+        tips.push(wall.safeStop >= FSTOPS[0]
+          ? `Open up to <b>${fmtStop(wall.safeStop)}</b> or wider to blur the LED grid away (blur ≥ ${Optics.SAFE_BLUR_RATIO}× imaged pitch).`
+          : 'Even wide open the LED grid stays resolved — increase the subject-to-wall distance, focus closer, or use a finer-pitch wall.');
+      }
+    } else if (wall.moireLevel === 1) {
+      tips.push(`The LED grid is resolved (${fmtUm(mw.pImgMm)} per LED pixel, ${mw.ratio.toFixed(1)} photosites) — individual LEDs may be visible, but it is sampled finely enough that aliasing is unlikely.`);
+    } else if (mw) {
+      tips.push(`LED grid is blurred away by defocus (≤ ${Math.round(mw.contrast * 100)}% contrast) — moiré unlikely.`);
+    }
   } else {
     tips.push('The LED wall is not in frame — pan the camera toward the wall or widen the lens.');
   }
@@ -699,15 +844,21 @@ function renderReadouts(o) {
 
   // Status banner
   const el = document.getElementById('status');
+  const moireTxt = moireOn ? ` · moiré risk ${MOIRE_LABEL[wall.moireLevel].toLowerCase()}` : '';
   if (!inShot) {
     el.className = 'status neutral';
     el.textContent = 'LED wall not in frame';
   } else if (hazardOn) {
     el.className = 'status hazard';
-    el.innerHTML = `<span>⚠ LED wall in focus — ${Math.round(wall.fraction * 100)}% of the visible wall is inside the depth of field</span>`;
+    el.innerHTML = `<span>⚠ LED wall in focus — ${Math.round(wall.fraction * 100)}% of the visible wall is inside the depth of field${moireTxt}</span>`;
+  } else if (moireOn) {
+    el.className = 'status warn';
+    el.textContent = `⚠ Wall outside the DOF, but moiré risk is ${MOIRE_LABEL[wall.moireLevel].toLowerCase()}`;
   } else {
     el.className = 'status ok';
-    el.textContent = `✓ Wall out of focus — ${fmtM(gap)} beyond the far limit`;
+    el.textContent = gap !== null && gap >= 0
+      ? `✓ Wall out of focus — ${fmtM(gap)} beyond the far limit`
+      : '✓ Wall out of focus — it sits in front of the near limit';
   }
 }
 
@@ -755,13 +906,35 @@ function buildControls() {
   }
 
   const bodySel = document.getElementById('body');
-  bodySel.innerHTML = CAMERAS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  bodySel.addEventListener('change', () => set('body', bodySel.value));
+  const groups = [...new Set(CAMERAS.map(c => c.group))];
+  bodySel.innerHTML = groups.map(g => `<optgroup label="${g}">` +
+    CAMERAS.filter(c => c.group === g).map(c => `<option value="${c.id}">${c.name}</option>`).join('') +
+    '</optgroup>').join('');
+  bodySel.addEventListener('change', () => {
+    const cam = CAMERAS.find(c => c.id === bodySel.value);
+    if (cam.id !== 'custom') { state.sensorW = cam.w; state.sensorH = cam.h; state.resH = cam.res; }
+    set('body', cam.id);
+  });
 
-  for (const key of ['customW', 'customH', 'coc']) {
+  const pitchSel = document.getElementById('pitchSel');
+  pitchSel.innerHTML = PITCHES.map(p => `<option value="${p}">${p.toFixed(1)} mm</option>`).join('') +
+    '<option value="custom">Custom…</option>';
+  pitchSel.addEventListener('change', () => {
+    if (pitchSel.value === 'custom') { document.getElementById('pitch').focus(); return; }
+    set('pitch', +pitchSel.value);
+  });
+
+  // Free-entry number boxes. Typing a sensor size switches the camera to "Custom".
+  const numberInputs = {
+    sensorW: () => { state.body = 'custom'; },
+    sensorH: () => { state.body = 'custom'; },
+    resH: null, pitch: null, coc: null,
+  };
+  for (const [key, before] of Object.entries(numberInputs)) {
     const el = document.getElementById(key);
     el.addEventListener('change', () => {
       if (el.value === '' || !isFinite(+el.value) || +el.value <= 0) return sync();
+      if (before) before();
       set(key, +el.value);
     });
   }
@@ -784,28 +957,39 @@ function set(key, value) {
 // Keep the scene physically sensible.
 function normalise() {
   const s = state;
-  const half = stageHalfWidth();
   for (const row of rows) {
     const { key, min, max } = row.spec;
     if (row.spec.dyn) continue;
     s[key] = clamp(s[key], min, max);
   }
-  s.camX = clamp(s.camX, -half, half);
-  s.subX = clamp(s.subX, -half, half);
-  s.camZ = clamp(s.camZ, 0.3, s.stageDepth);
-  s.subZ = clamp(s.subZ, 0.2, s.stageDepth);
   s.fstopIdx = Math.round(clamp(s.fstopIdx, 0, FSTOPS.length - 1));
-  if (!CAMERAS.some(c => c.id === s.body)) s.body = DEFAULTS.body;
-  s.customW = clamp(s.customW, 1, 80);
-  s.customH = clamp(s.customH, 1, 60);
+  s.curve = Math.round(s.curve);
+
+  const cam = CAMERAS.find(c => c.id === s.body);
+  if (!cam) s.body = DEFAULTS.body;
+  if (cam && cam.id !== 'custom') { s.sensorW = cam.w; s.sensorH = cam.h; }
+  s.sensorW = clamp(s.sensorW, 1, 80);
+  s.sensorH = clamp(s.sensorH, 1, 60);
+  s.resH = Math.round(clamp(s.resH, 256, 20000));
+  s.pitch = clamp(s.pitch, 0.3, 20);
   s.coc = clamp(s.coc, 0.002, 0.1);
+
+  // Camera and subject stay on the stage, in front of the LED face.
+  const b = stageBounds();
+  const shape = wallShape();
+  for (const [kx, kz, margin] of [['camX', 'camZ', 0.3], ['subX', 'subZ', 0.2]]) {
+    let x = clamp(s[kx], b.xmin, b.xmax), z = clamp(s[kz], b.zmin, b.zmax);
+    ({ x, z } = Optics.keepInFront(shape, x, z, margin));
+    s[kx] = +x.toFixed(2);
+    s[kz] = +z.toFixed(2);
+  }
 }
 
 function sync(o) {
-  const half = stageHalfWidth();
+  const b = stageBounds();
   for (const { spec, range, num, out } of rows) {
-    if (spec.dyn === 'x') { range.min = -half; range.max = half; }
-    if (spec.dyn === 'z') { range.max = state.stageDepth; }
+    if (spec.dyn === 'x') { range.min = b.xmin; range.max = b.xmax; }
+    if (spec.dyn === 'z') { range.min = b.zmin; range.max = b.zmax; }
     const v = state[spec.key];
     range.value = toPos(spec, v);
     if (num && document.activeElement !== num) num.value = (+v).toFixed(decimals(spec.step));
@@ -815,9 +999,13 @@ function sync(o) {
   focusRow.row.classList.toggle('following', state.focusAuto);
 
   document.getElementById('body').value = state.body;
-  document.getElementById('custom-sensor').hidden = state.body !== 'custom';
-  document.getElementById('customW').value = state.customW;
-  document.getElementById('customH').value = state.customH;
+  for (const key of ['sensorW', 'sensorH', 'resH', 'pitch']) document.getElementById(key).value = state[key];
+  const preset = PITCHES.find(p => Math.abs(p - state.pitch) < 1e-9);
+  document.getElementById('pitchSel').value = preset !== undefined ? String(preset) : 'custom';
+  const shape = wallShape();
+  document.getElementById('curve-info').textContent = shape.flat
+    ? 'Flat wall. Positive = concave (wraps around the stage), negative = convex.'
+    : `${state.curve > 0 ? 'Concave' : 'Convex'} arc · radius ${Math.abs(shape.R).toFixed(2)} m · chord ${(2 * Math.abs(shape.R) * Math.sin(Math.abs(shape.theta) / 2)).toFixed(2)} m`;
   document.getElementById('focusAuto').checked = state.focusAuto;
   document.getElementById('cocAuto').checked = state.cocAuto;
   const cocEl = document.getElementById('coc');
@@ -826,7 +1014,7 @@ function sync(o) {
   if (o) {
     const diag = Math.hypot(o.sen.w, o.sen.h);
     document.getElementById('sensor-info').textContent =
-      `Sensor ${o.sen.w.toFixed(2)} × ${o.sen.h.toFixed(2)} mm · diagonal ${diag.toFixed(1)} mm · crop ${(43.27 / diag).toFixed(2)}× vs full frame`;
+      `Diagonal ${diag.toFixed(1)} mm · crop ${(43.27 / diag).toFixed(2)}× vs full frame · photosite ${fmtUm(o.photositeMm)}`;
   }
 }
 

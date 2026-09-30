@@ -26,6 +26,10 @@
   --warn-text: #111;
   --hazard-a: #f5c400;
   --hazard-b: #111111;
+  --moire-high: #dc2626;
+  --moire-mid: #f97316;
+  --warn-bg: #fff1e0;
+  --warn-fg: #9a3412;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,6 +58,10 @@
 
     --ok-bg: #12301f;
     --ok-text: #6ee7a3;
+    --moire-high: #f87171;
+    --moire-mid: #fb923c;
+    --warn-bg: #3a2210;
+    --warn-fg: #fdba74;
   }
 }
 
@@ -80,6 +88,10 @@
   --subject: #fb923c;
   --ok-bg: #12301f;
   --ok-text: #6ee7a3;
+  --moire-high: #f87171;
+  --moire-mid: #fb923c;
+  --warn-bg: #3a2210;
+  --warn-fg: #fdba74;
 }
 
 * { box-sizing: border-box; }
@@ -115,6 +127,7 @@ body {
   max-width: 60%;
 }
 .status.ok { background: var(--ok-bg); color: var(--ok-text); }
+.status.warn { background: var(--warn-bg); color: var(--warn-fg); }
 .status.neutral { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 .status.hazard {
   color: var(--warn-text);
@@ -162,24 +175,9 @@ body {
   color: var(--muted);
   margin: 0 0 8px;
 }
-.panel.soon { opacity: 0.7; }
 
-.badge {
-  display: inline-block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  border-radius: 99px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-weight: 600;
-  vertical-align: middle;
-}
 
 .row { margin: 8px 0; }
-.row.disabled { opacity: 0.5; }
 .row.following input[type="range"] { opacity: 0.55; }
 .row-head {
   display: flex;
@@ -216,6 +214,7 @@ body {
   padding: 5px 6px;
 }
 .check { display: flex; gap: 8px; align-items: center; margin: 8px 0; cursor: pointer; }
+.subgroup { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 4px; }
 .coc { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 4px; }
 .hint { color: var(--muted); font-size: 12px; margin: 4px 0; }
 
@@ -268,6 +267,8 @@ canvas {
 .sw.line { height: 3px; }
 .sw.focus { background: var(--focus); }
 .sw.lit { background: var(--wall-lit); }
+.sw.moire-mid { background: var(--moire-mid); }
+.sw.moire-high { background: var(--moire-high); }
 .sw.hazard { background: repeating-linear-gradient(-45deg, var(--hazard-a) 0 3px, var(--hazard-b) 3px 6px); }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot.near { background: var(--near); }
